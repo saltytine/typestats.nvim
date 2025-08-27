@@ -1,6 +1,6 @@
 # typestats.nvim
 
-A tiny Neovim plugin that tracks your typing speed (WPM) and streaks in insert mode, and shows them in the built-in statusline.
+A tiny Neovim plugin that tracks your typing speed (WPM) in insert mode, and shows them in the built-in statusline.
 
 ## Installation
 
