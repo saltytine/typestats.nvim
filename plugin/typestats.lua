@@ -6,7 +6,7 @@ local streak = 0
 local max_streak = 0
 local wpm = 0
 
-local timeout = 5000 -- streak timeout (ms)
+local timeout = 5000 -- streak timeout in ms
 local timer = vim.loop.new_timer()
 
 local function reset_streak()
@@ -30,27 +30,29 @@ local function on_key(key)
     return
   end
 
-  if key == vim.api.nvim_replace_termcodes("<BS>", true, true, true)
-     or key == vim.api.nvim_replace_termcodes("<Del>", true, true, true)
-     or key == vim.api.nvim_replace_termcodes("<Left>", true, true, true)
-     or key == vim.api.nvim_replace_termcodes("<Right>", true, true, true)
-     or key == vim.api.nvim_replace_termcodes("<Up>", true, true, true)
-     or key == vim.api.nvim_replace_termcodes("<Down>", true, true, true) then
-    reset_streak()
-    last_time = now
-    return
+  local breakers = {
+    "<BS>", "<Del>", "<Left>", "<Right>", "<Up>", "<Down>",
+  }
+  for _, b in ipairs(breakers) do
+    if key == vim.api.nvim_replace_termcodes(b, true, true, true) then
+      reset_streak()
+      last_time = now
+      return
+    end
   end
 
-  streak = streak + 1
-  if streak > max_streak then
-    max_streak = streak
-  end
+  if key:match("^%C$") then
+    streak = streak + 1
+    if streak > max_streak then
+      max_streak = streak
+    end
 
-  char_count = char_count + 1
+    char_count = char_count + 1
 
-  local elapsed_min = (now - last_time) / 60000
-  if elapsed_min > 0 then
-    wpm = math.floor((char_count / 5) / elapsed_min)
+    local elapsed_min = (now - last_time) / 60000
+    if elapsed_min > 0 then
+      wpm = math.floor((char_count / 5) / elapsed_min)
+    end
   end
 
   last_time = now
@@ -62,7 +64,7 @@ end
 
 function M.setup()
   vim.on_key(on_key, M)
-  timer:start(1000, 1000, vim.schedule_wrap(tick)) -- every second
+  timer:start(1000, 1000, vim.schedule_wrap(tick))
 end
 
 _G.TypeStats = M
