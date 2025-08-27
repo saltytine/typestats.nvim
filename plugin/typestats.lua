@@ -65,5 +65,7 @@ function M.setup()
   timer:start(1000, 1000, vim.schedule_wrap(tick)) -- every second
 end
 
+_G.TypeStats = M
+
 return M
 
