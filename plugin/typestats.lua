@@ -1,44 +1,35 @@
-if vim.g.loaded_typestats then
-  return
-end
-vim.g.loaded_typestats = true
-
 local M = {}
 
-local typed = 0
-local streak = 0
-local max_streak = 0
-local start_time = vim.loop.hrtime()
+M.chars_typed = 0
+M.start_time = vim.loop.hrtime()
+M.streak = 0
+M.max_streak = 0
+M.wpm = 0
 
-vim.api.nvim_create_autocmd("InsertCharPre", {
-  callback = function(ev)
-    local char = ev.char
-    if char == nil then return end
+vim.on_key(function(key)
+  if vim.fn.mode() ~= "i" then return end
 
-    if char == "\b" or char == vim.api.nvim_replace_termcodes("<BS>", true, true, true) then
-      streak = 0
-      return
+  if key == "\b" or key == vim.api.nvim_replace_termcodes("<BS>", true, true, true) then
+    if M.streak > M.max_streak then
+      M.max_streak = M.streak
     end
+    M.streak = 0
+    return
+  end
 
-    if char:match("%C") then
-      typed = typed + 1
-      streak = streak + 1
-      if streak > max_streak then
-        max_streak = streak
-      end
-    end
-  end,
-})
+  if key:match("%C") then
+    M.chars_typed = M.chars_typed + 1
+    M.streak = M.streak + 1
+  end
 
-local function get_wpm()
-  local now = vim.loop.hrtime()
-  local minutes = (now - start_time) / 1e9 / 60
-  if minutes <= 0 then return 0 end
-  return math.floor((typed / 5) / minutes)
-end
+  local elapsed = (vim.loop.hrtime() - M.start_time) / 1e9 / 60 -- minutes
+  if elapsed > 0 then
+    M.wpm = math.floor((M.chars_typed / 5) / elapsed)
+  end
+end, vim.api.nvim_create_namespace("typestats"))
 
 function M.statusline()
-  return string.format("[WPM:%d][Streak:%d]", get_wpm(), streak)
+  return string.format("[WPM:%d] [Streak:%d]", M.wpm, M.streak)
 end
 
 _G.TypeStats = M
