@@ -8,26 +8,27 @@ M.wpm = 0
 M.last_key_time = vim.loop.hrtime()
 
 local break_keys = {
-  ["<BS>"] = true,
-  ["<Del>"] = true,
+  ["<BS>"]   = true,
+  ["<Del>"]  = true,
   ["<Left>"] = true,
-  ["<Right>"] = true,
-  ["<Up>"] = true,
+  ["<Right>"]= true,
+  ["<Up>"]   = true,
   ["<Down>"] = true,
-  ["<C-h>"] = true,
-  ["<C-w>"] = true,
-  ["<C-u>"] = true,
-  ["<Esc>"] = true,
+  ["<C-h>"]  = true,
+  ["<C-w>"]  = true,
+  ["<C-u>"]  = true,
+  ["<Esc>"]  = true,
 }
 
--- key handler
 vim.on_key(function(key)
   if vim.fn.mode() ~= "i" then return end
-  local term = vim.api.nvim_replace_termcodes(key, true, true, true)
   local now = vim.loop.hrtime()
   M.last_key_time = now
 
-  -- streak breaker
+  -- normalize key to termcodes
+  local term = vim.api.nvim_replace_termcodes(key, true, true, true)
+
+  -- check breaker keys
   if break_keys[term] then
     if M.streak > M.max_streak then
       M.max_streak = M.streak
@@ -36,7 +37,7 @@ vim.on_key(function(key)
     return
   end
 
-  -- printable char
+  -- printable chars only
   if #term == 1 and term:match("[%g%s]") then
     M.chars_typed = M.chars_typed + 1
     M.streak = M.streak + 1
