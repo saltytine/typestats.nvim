@@ -63,7 +63,8 @@ function M.statusline()
 end
 
 function M.setup()
-  vim.on_key(on_key, M)
+  local ns = vim.api.nvim_create_namespace("typestats")
+  vim.on_key(on_key, ns) -- pass the namespace number, not the table
   timer:start(1000, 1000, vim.schedule_wrap(tick))
 end
 
