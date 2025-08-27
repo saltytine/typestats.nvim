@@ -7,18 +7,7 @@ M.max_streak = 0
 M.wpm = 0
 M.last_key_time = vim.loop.hrtime()
 
-local break_keys = {
-  ["<BS>"]   = true,
-  ["<Del>"]  = true,
-  ["<Left>"] = true,
-  ["<Right>"]= true,
-  ["<Up>"]   = true,
-  ["<Down>"] = true,
-  ["<C-h>"]  = true,
-  ["<C-w>"]  = true,
-  ["<C-u>"]  = true,
-  ["<Esc>"]  = true,
-}
+local break_keys = {}
 
 vim.on_key(function(key)
   if vim.fn.mode() ~= "i" then return end
@@ -95,4 +84,3 @@ end
 
 _G.TypeStats = M
 return M
-
