@@ -5,6 +5,7 @@ M.start_time = vim.loop.hrtime()
 M.streak = 0
 M.max_streak = 0
 M.wpm = 0
+M.last_key_time = vim.loop.hrtime()
 
 local break_keys = {
   ["<BS>"] = true,
@@ -22,6 +23,17 @@ local break_keys = {
 vim.on_key(function(key)
   if vim.fn.mode() ~= "i" then return end
   local term = vim.api.nvim_replace_termcodes(key, true, true, true)
+
+  -- check idle > 5s, reset if so
+  local now = vim.loop.hrtime()
+  local idle = (now - M.last_key_time) / 1e9
+  if idle > 5 then
+    M.chars_typed = 0
+    M.streak = 0
+    M.wpm = 0
+    M.start_time = now
+  end
+  M.last_key_time = now
 
   -- streak breaker keys
   if break_keys[term] then
@@ -45,20 +57,26 @@ vim.on_key(function(key)
   end
 end)
 
--- reset timer + streak when entering insert
-vim.api.nvim_create_autocmd("InsertEnter", {
-  callback = function()
-    M.start_time = vim.loop.hrtime()
-    M.streak = 0
-  end,
-})
-
--- update max streak if you leave insert mode mid-run
+-- reset when leaving insert mode
 vim.api.nvim_create_autocmd("InsertLeave", {
   callback = function()
     if M.streak > M.max_streak then
       M.max_streak = M.streak
     end
+    M.chars_typed = 0
+    M.streak = 0
+    M.wpm = 0
+  end,
+})
+
+-- reset on insert enter too
+vim.api.nvim_create_autocmd("InsertEnter", {
+  callback = function()
+    M.start_time = vim.loop.hrtime()
+    M.last_key_time = M.start_time
+    M.streak = 0
+    M.chars_typed = 0
+    M.wpm = 0
   end,
 })
 
