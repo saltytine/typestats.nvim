@@ -20,22 +20,14 @@ local break_keys = {
   ["<Esc>"] = true,
 }
 
+-- key handler
 vim.on_key(function(key)
   if vim.fn.mode() ~= "i" then return end
   local term = vim.api.nvim_replace_termcodes(key, true, true, true)
-
-  -- check idle > 5s, reset if so
   local now = vim.loop.hrtime()
-  local idle = (now - M.last_key_time) / 1e9
-  if idle > 5 then
-    M.chars_typed = 0
-    M.streak = 0
-    M.wpm = 0
-    M.start_time = now
-  end
   M.last_key_time = now
 
-  -- streak breaker keys
+  -- streak breaker
   if break_keys[term] then
     if M.streak > M.max_streak then
       M.max_streak = M.streak
@@ -44,20 +36,31 @@ vim.on_key(function(key)
     return
   end
 
-  -- printable single chars (letters, digits, punct, spaces)
+  -- printable char
   if #term == 1 and term:match("[%g%s]") then
     M.chars_typed = M.chars_typed + 1
     M.streak = M.streak + 1
   end
 
   -- recalc wpm
-  local elapsed = (vim.loop.hrtime() - M.start_time) / 1e9 / 60
+  local elapsed = (now - M.start_time) / 1e9 / 60
   if elapsed > 0 then
     M.wpm = math.floor((M.chars_typed / 5) / elapsed)
   end
 end)
 
--- reset when leaving insert mode
+-- reset on insert enter
+vim.api.nvim_create_autocmd("InsertEnter", {
+  callback = function()
+    M.start_time = vim.loop.hrtime()
+    M.last_key_time = M.start_time
+    M.streak = 0
+    M.chars_typed = 0
+    M.wpm = 0
+  end,
+})
+
+-- reset on insert leave
 vim.api.nvim_create_autocmd("InsertLeave", {
   callback = function()
     if M.streak > M.max_streak then
@@ -69,18 +72,23 @@ vim.api.nvim_create_autocmd("InsertLeave", {
   end,
 })
 
--- reset on insert enter too
-vim.api.nvim_create_autocmd("InsertEnter", {
-  callback = function()
-    M.start_time = vim.loop.hrtime()
-    M.last_key_time = M.start_time
-    M.streak = 0
+-- idle reset timer
+local timer = vim.loop.new_timer()
+timer:start(1000, 1000, vim.schedule_wrap(function()
+  local now = vim.loop.hrtime()
+  local idle = (now - M.last_key_time) / 1e9
+  if idle > 5 then
     M.chars_typed = 0
+    M.streak = 0
     M.wpm = 0
-  end,
-})
+    M.start_time = now
+  end
+end))
 
 function M.statusline()
+  if vim.fn.mode() ~= "i" then
+    return "[WPM:0] [Streak:0/" .. M.max_streak .. "]"
+  end
   return string.format("[WPM:%d] [Streak:%d/%d]", M.wpm, M.streak, M.max_streak)
 end
 
