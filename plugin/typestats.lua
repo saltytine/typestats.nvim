@@ -1,65 +1,69 @@
 local M = {}
 
-M.chars_typed = 0
-M.start_time = vim.loop.hrtime()
-M.streak = 0
-M.max_streak = 0
-M.wpm = 0
-M.last_key_time = vim.loop.hrtime()
+local last_time = nil
+local char_count = 0
+local streak = 0
+local max_streak = 0
+local wpm = 0
 
-local STREAK_TIMEOUT = 5
+local timeout = 5000 -- streak timeout (ms)
+local timer = vim.loop.new_timer()
 
-local break_keys = {
-  ["<BS>"] = true,
-  ["<Del>"] = true,
-  ["<Left>"] = true,
-  ["<Right>"] = true,
-  ["<Up>"] = true,
-  ["<Down>"] = true,
-  ["<C-h>"] = true,
-  ["<C-w>"] = true,
-  ["<C-u>"] = true,
-  ["<Esc>"] = true,
-}
+local function reset_streak()
+  streak = 0
+end
 
-local ns = vim.api.nvim_create_namespace("typestats")
-
-vim.on_key(function(key)
-  if vim.fn.mode() ~= "i" then return end
-
-  local now = vim.loop.hrtime()
-  local term = vim.api.nvim_replace_termcodes(key, true, true, true)
-
-  if (now - M.last_key_time) / 1e9 > STREAK_TIMEOUT then
-    if M.streak > M.max_streak then
-      M.max_streak = M.streak
+local function tick()
+  if last_time then
+    local now = vim.loop.hrtime() / 1e6 -- ms
+    if now - last_time > timeout then
+      reset_streak()
+      wpm = 0
     end
-    M.streak = 0
   end
-  M.last_key_time = now
+end
 
-  if break_keys[term] then
-    if M.streak > M.max_streak then
-      M.max_streak = M.streak
-    end
-    M.streak = 0
+local function on_key(key)
+  local now = vim.loop.hrtime() / 1e6 -- ms
+  if not last_time then
+    last_time = now
     return
   end
 
-  if key:match("%C") then
-    M.chars_typed = M.chars_typed + 1
-    M.streak = M.streak + 1
+  if key == vim.api.nvim_replace_termcodes("<BS>", true, true, true)
+     or key == vim.api.nvim_replace_termcodes("<Del>", true, true, true)
+     or key == vim.api.nvim_replace_termcodes("<Left>", true, true, true)
+     or key == vim.api.nvim_replace_termcodes("<Right>", true, true, true)
+     or key == vim.api.nvim_replace_termcodes("<Up>", true, true, true)
+     or key == vim.api.nvim_replace_termcodes("<Down>", true, true, true) then
+    reset_streak()
+    last_time = now
+    return
   end
 
-  local elapsed = (now - M.start_time) / 1e9 / 60
-  if elapsed > 0 then
-    M.wpm = math.floor((M.chars_typed / 5) / elapsed)
+  streak = streak + 1
+  if streak > max_streak then
+    max_streak = streak
   end
-end, ns)
 
-function M.statusline()
-  return string.format("[WPM:%d] [Streak:%d/%d]", M.wpm, M.streak, M.max_streak)
+  char_count = char_count + 1
+
+  local elapsed_min = (now - last_time) / 60000
+  if elapsed_min > 0 then
+    wpm = math.floor((char_count / 5) / elapsed_min)
+  end
+
+  last_time = now
 end
 
-_G.TypeStats = M
+function M.statusline()
+  return string.format("[WPM:%d] [Streak:%d/%d]", wpm, streak, max_streak)
+end
+
+function M.setup()
+  vim.on_key(on_key, M)
+  timer:start(1000, 1000, vim.schedule_wrap(tick)) -- every second
+end
+
 return M
+
