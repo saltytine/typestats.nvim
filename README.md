@@ -11,7 +11,7 @@ Use your plugin manager of choice. Example with [lazy.nvim](https://github.com/f
   "saltytine/typestats.nvim",
   name = "typestats",
   config = function()
-    vim.o.statusline = "%f %h%m%r %=%{v:lua.TypeStats.statusline()}"
+    vim.o.statusline = "%f %h%m%r %=%{v:lua.TypeStats.statusline()} %l,%c %p%%"
   end,
 },
 ```
